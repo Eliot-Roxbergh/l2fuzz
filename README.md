@@ -5,25 +5,30 @@ A stateful fuzzer to detect vulnerabilities in Bluetooth BR/EDR Logical Link Con
 
 ## Prerequisites
 
-L2Fuzz uses python3.6.9 and scapy 2.4.4. Also, it uses Bluetooth Dongle.
+L2Fuzz original repo used python3.6.9 and scapy 2.4.4 (if something breaks rollback to these versions?). Also, it uses a Bluetooth dongle.
 
+```bash
+# Installation
+sudo apt-get install bluetooth libbluetooth-dev python3-pip -y
+python3 -m venv env
+source env/bin/activate
+pip install -r requirements.txt
+
+# Running the tool
+sudo su
+source env/bin/activate
+python3 l2fuzz.py
 ```
-sudo apt-get install python3-pip
-pip3 install scapy==2.4.4
-sudo apt-get install libbluetooth-dev
-sudo pip3 install git+https://github.com/pybluez/pybluez.git
-pip3 install python-statemachine
-pip3 install ouilookup
-cd /usr/lib/x86_64-linux-gnu/
-sudo ln -s -f libc.a liblibc.a
-```
+
 
 ## Running the tests
 
 1. move to L2Fuzz folder.
 2. run l2fuzz.py .
 ```
-sudo python3 l2fuzz.py
+sudo su
+source env/bin/activate
+python3 l2fuzz.py
 ```
 3. Choose target device.
 ```
