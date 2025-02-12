@@ -3,7 +3,7 @@ import sys, os, re
 import datetime, json
 
 from scapy.all import *
-from OuiLookup import OuiLookup
+from ouilookup import OuiLookup
 from collections import OrderedDict
 
 from l2cap_fuzzer import *
