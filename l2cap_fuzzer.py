@@ -652,8 +652,8 @@ def configuration_state_fuzzing(
         global conn_rsp_flag
         global dcid_value
 
+        # Only run on first invokation of this function, i.e. only run once in total over lifetime of program
         if conn_rsp_flag == 0:
-            # Only one time
             conn_rsp = sock.recv()  # save pkt info for configuration request
 
             try:
@@ -664,16 +664,24 @@ def configuration_state_fuzzing(
                 result_value = 1
 
             conn_rsp_flag = 1
-            # Can't connection to selected PSM.
+            # Can't connect to selected PSM.
+            #
+            # TODO this worked terribly in the test setup: each port fails with this error for some reason, including port 1.
+            #       Description of code: it only runs this if-statement once, defaults to port 1 on failure, and then moves on.
+            #       Result: This seems quite useless as nothing says that port 1 would succeed,
+            #                   moreover, it's misleading to test another port than given by user.
+            #       Correct me if I'm wrong.
             if result_value != 0:
                 print(
-                    "[!] Device is not paired with host('{}'). \n[!] Can't test service port that you've selected. Now set port as default PSM, '1'.".format(
+                    "[!] Device is not paired with host('{}'). \n[!] Can't (?) test service port that you've selected (try port 1 instead?).".format(
                         L2CAP_Connect_Result.get(
                             result_value, "reserved for future use"
                         )
                     )
                 )
-                port = 1
+                print(f"[-] Warning you may want to test another port or verify test is actually working for {port=}.")
+                print("[-] Ignoring this error and trying again, beware.")
+                #port = 1
                 continue
         break
 
@@ -1080,10 +1088,15 @@ def l2cap_fuzzing(bt_addr, profile, port, test_info):
                     # Disconnection State Fuzzing (1/1)
                     disconnection_state_fuzzing(bt_addr, sock, state_machine, port, logger)
 
-                # In case an unexpected error, reset BT adapter and continue testing (a bit ugly)
+                except KeyError as exception:
+                    print(f"[-] Got exception KeyError: {exception}")
+                    print(f"[-] Catch programmer errors, this should never happen")
+                    exit(1)
+
+                # In case an unexpected error, reset BT socket/state and continue testing (a bit ugly)
                 except Exception as exception:
-                    print(f"[!] Unexpected: {exception}. Restarting bluetooth.. continuing...")
-                    #print("[!] reopening bluetooth socket")
+                    print(f"[!] Unexpected exception: {exception}. Reopening bluetooth socket and continuing...")
+                    print(f"[-] Warning! This was not expected. Resetting socket/state machine may create issues.\n")
 
                     # arbitrary wait
                     time.sleep(2)
