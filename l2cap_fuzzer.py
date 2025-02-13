@@ -1052,9 +1052,10 @@ def l2cap_fuzzing(bt_addr, profile, port, test_info):
                 try:
                     print("[+] Tested %d packets" % (pkt_cnt))
 
-                    # log slicing
-                    if len(logger["packet"]) > 200000:
-                        del logger["packet"][:100000]
+                    #Note! exit after many requests to avoid very big log files / out of memory, arbitrary limit
+                    if len(logger["packet"]) > 5000000:
+                        print("Success! 50m tries performed, saving to log..")
+                        raise KeyboardInterrupt
 
                     # Connection State Fuzzing (1/2) + closed
                     connection_state_fuzzing(bt_addr, sock, state_machine, logger)
