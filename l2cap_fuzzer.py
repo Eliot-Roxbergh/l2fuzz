@@ -1,6 +1,9 @@
 import subprocess
 import json
 
+#tmp erox
+import time
+
 from datetime import datetime
 
 from statemachine import StateMachine, State
@@ -475,6 +478,8 @@ def send_pkt(bt_addr, sock, pkt, cmd_code, state):
             pkt_info["crash_info"] = "OSError - Host is down"
             print("[-] Crash packet causes HOST DOWN. Test finished.")
         else:
+            print(f"ERR: IDK some OS error when sending pkg: {e}")
+            sleep(5)
             pass
     else:
         pass
@@ -1044,27 +1049,47 @@ def l2cap_fuzzing(bt_addr, profile, port, test_info):
 
         try:
             while True:
-                print("[+] Tested %d packets" % (pkt_cnt))
-                # log slicing
-                if len(logger["packet"]) > 200000:
-                    del logger["packet"][:100000]
-                # Connection State Fuzzing (1/2) + closed
-                connection_state_fuzzing(bt_addr, sock, state_machine, logger)
+                try:
+                    print("[+] Tested %d packets" % (pkt_cnt))
 
-                # Creation State fuzzing (1/2)
-                creation_state_fuzzing(bt_addr, sock, state_machine, logger)
+                    # log slicing
+                    if len(logger["packet"]) > 200000:
+                        del logger["packet"][:100000]
 
-                # Configuration State Fuzzing (6/8)
-                configuration_state_fuzzing(
-                    bt_addr, sock, state_machine, profile, port, logger
-                )
+                    # Connection State Fuzzing (1/2) + closed
+                    connection_state_fuzzing(bt_addr, sock, state_machine, logger)
 
-                # Connection Shift State Fuzzing (2/4)
-                shift_state_fuzzing(bt_addr, sock, state_machine, logger)
+                    # Creation State fuzzing (1/2)
+                    creation_state_fuzzing(bt_addr, sock, state_machine, logger)
 
-                # Disconnection State Fuzzing (1/1)
-                disconnection_state_fuzzing(bt_addr, sock, state_machine, port, logger)
+                    # Configuration State Fuzzing (6/8)
+                    configuration_state_fuzzing(
+                        bt_addr, sock, state_machine, profile, port, logger
+                    )
 
+                    # Connection Shift State Fuzzing (2/4)
+                    shift_state_fuzzing(bt_addr, sock, state_machine, logger)
+
+                    # Disconnection State Fuzzing (1/1)
+                    disconnection_state_fuzzing(bt_addr, sock, state_machine, port, logger)
+
+                # In case an unexpected error, reset BT adapter and continue testing (a bit ugly)
+                except Exception as exception:
+                    print(f"ERR: unexpected: {exception}")
+                    print(f"INFO: reopening bluetooth socket")
+
+                    # arbitrary wait
+                    time.sleep(2)
+
+                    # Reset Socket and State
+                    sock = BluetoothL2CAPSocket(bt_addr)
+                    state_machine = l2cap_state_machine()
+
+                    # arbitrary wait
+                    time.sleep(2)
+                    print(f"INFO: restarted bluetooth")
+
+        # (This should not be possible any longer due to above except)
         except Exception as exception:
             print(f"[!] Error Message : {exception}")
             print("[+] Save logfile")
