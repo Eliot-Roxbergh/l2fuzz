@@ -20,8 +20,17 @@ source env/bin/activate
 python3 l2fuzz.py
 ```
 
+## Running the tests: command line
+```
+sudo su
+source env/bin/activate
 
-## Running the tests
+# arg 1: target mac
+# arg 2: numeric index of profile starting at 0
+python3 l2fuzz.py AA:BB:CC:DD:EE:FF 0
+```
+
+## Running the tests: interactive mode
 
 1. move to L2Fuzz folder.
 2. run l2fuzz.py .
