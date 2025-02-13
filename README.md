@@ -10,20 +10,20 @@ L2Fuzz original repo used python3.6.9 and scapy 2.4.4 (if something breaks rollb
 ```bash
 # Installation
 sudo apt-get install bluetooth libbluetooth-dev python3-pip -y
-python3 -m venv env
-source env/bin/activate
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 
 # Running the tool
 sudo su
-source env/bin/activate
+source venv/bin/activate
 python3 l2fuzz.py
 ```
 
 ## Running the tests: command line
 ```
 sudo su
-source env/bin/activate
+source venv/bin/activate
 
 # arg 1: target mac
 # arg 2: numeric index of profile starting at 0
@@ -36,7 +36,7 @@ python3 l2fuzz.py AA:BB:CC:DD:EE:FF 0
 2. run l2fuzz.py .
 ```
 sudo su
-source env/bin/activate
+source venv/bin/activate
 python3 l2fuzz.py
 ```
 3. Choose target device.

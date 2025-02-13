@@ -1,3 +1,6 @@
+# Project logs
+.wfl
+
 # Project environment files.
 .DS_Store
 .env
