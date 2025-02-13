@@ -408,7 +408,7 @@ def send_pkt(bt_addr, sock, pkt, cmd_code, state):
             pkt_info["crash"] = "y"
             pkt_info["crash_info"] = "ConnectionResetError"
         else:
-            print("INFO: connection failed but it went up quickly again, not a hard crash.")
+            print("[-] The connection failed but it went up quickly again, this was not a hard crash (will not be marked as 'crash' in log).")
 
     except ConnectionRefusedError:
         print("[-] Crash Found - ConnectionRefusedError detected")
@@ -426,7 +426,7 @@ def send_pkt(bt_addr, sock, pkt, cmd_code, state):
             pkt_info["crash"] = "y"
             pkt_info["crash_info"] = "ConnectionRefusedError"
         else:
-            print("INFO: connection failed but it went up quickly again, not a hard crash.")
+            print("[-] The connection failed but it went up quickly again, this was not a hard crash (will not be marked as 'crash' in log).")
 
     except ConnectionAbortedError:
         print("[-] Crash Found - ConnectionAbortedError detected")
@@ -444,7 +444,7 @@ def send_pkt(bt_addr, sock, pkt, cmd_code, state):
             pkt_info["crash"] = "y"
             pkt_info["crash_info"] = "ConnectionAbortedError"
         else:
-            print("INFO: connection failed but it went up quickly again, not a hard crash.")
+            print("[-] The connection failed but it went up quickly again, this was not a hard crash (will not be marked as 'crash' in log).")
 
     except TimeoutError:
         # State Timeout
@@ -484,8 +484,8 @@ def send_pkt(bt_addr, sock, pkt, cmd_code, state):
             pkt_info["crash_info"] = "OSError - Host is down"
             print("[-] Crash packet causes HOST DOWN. Test finished.")
         else:
-            print(f"ERR: IDK some OS error when sending pkg: {e}")
-            sleep(5)
+            print(f"[!] Unknown issue, got OS error when sending packet: {e}")
+            time.sleep(3)
             pass
     else:
         pass
@@ -1049,7 +1049,7 @@ def l2cap_fuzzing(bt_addr, profile, port, test_info):
         logger.update(test_info)
         logger["packet"] = []
 
-        print("Start Fuzzing... Please hit Ctrl + C to finish...")
+        #print("Start Fuzzing... Please hit Ctrl + C to finish...")
         sock = BluetoothL2CAPSocket(bt_addr)
         state_machine = l2cap_state_machine()
 
@@ -1082,19 +1082,19 @@ def l2cap_fuzzing(bt_addr, profile, port, test_info):
 
                 # In case an unexpected error, reset BT adapter and continue testing (a bit ugly)
                 except Exception as exception:
-                    print("ERR: unexpected: {exception}")
-                    print("INFO: reopening bluetooth socket")
+                    print(f"[!] Unexpected: {exception}. Restarting bluetooth.. continuing...")
+                    #print("[!] reopening bluetooth socket")
 
                     # arbitrary wait
                     time.sleep(2)
 
-                    # Reset Socket and State
+                    # Reset Socket and State. TODO: what effect does this have on running test?
                     sock = BluetoothL2CAPSocket(bt_addr)
                     state_machine = l2cap_state_machine()
 
                     # arbitrary wait
                     time.sleep(2)
-                    print(f"INFO: restarted bluetooth")
+                    #print(f"[!] restarted bluetooth")
 
         # (This should not be possible any longer due to above except)
         except Exception as exception:
