@@ -370,7 +370,7 @@ def bluetooth_services_and_protocols_search(bt_addr):
     return serv_chosen
 
 
-def start_fuzzing(target_addr, target_service, target_protocol, target_profile, target_profile_port):
+def start_fuzzing(target_addr, target_protocol, target_profile, target_profile_port):
     print("\n===================Test Information===================")
     print(json.dumps(test_info, ensure_ascii=False, indent="\t"))
     print("======================================================\n")
@@ -394,7 +394,7 @@ if __name__ == "__main__":
         target_profile = "L2CAP" # Doesn't matter - not used
 
         # Fuzz all ports
-        if sys.argv[2] = "all":
+        if sys.argv[2] == "all":
             # find all services on target
             print("Looking for services on ", target_addr)
             services = bluetooth.find_service(address=target_addr)
@@ -416,22 +416,23 @@ if __name__ == "__main__":
                 sys.exit("No L2CAP services found on target")
 
             # fuzz all services found
+            i = 0
             for serv in services:
                 if len(active_profile) == 0:
-                    print("Starting to fuzz target")
+                    print("Starting to fuzz target: ", i)
                     print("\t%02d. [None]: %s" % (i, serv["name"]))
                     print("...")
                 else:
-                    print("Starting to fuzz target")
-                    print("\t%02d. [0x%s]: %s" % (i, serv["profiles"][0][0], serv["name"]))
+                    print("Starting to fuzz target: ", i)
+                    #print("\t%02d. [0x%s]: %s" % (i, serv["profiles"][0][0], serv["name"]))
                     print("...")
                 i += 1
                 target_profile_port = serv["port"]
-                start_fuzzing(target_addr, target_service, target_protocol, target_profile, target_profile_port)
+                start_fuzzing(target_addr, target_protocol, target_profile, target_profile_port)
         # Fuzz given port only
         else:
             target_profile_port = int(sys.argv[2])
-            start_fuzzing(target_addr, target_service, target_protocol, target_profile, target_profile_port)
+            start_fuzzing(target_addr, target_protocol, target_profile, target_profile_port)
 
     # Iteractive mode
     else:
@@ -440,4 +441,4 @@ if __name__ == "__main__":
         target_protocol = target_service["protocol"]
         target_profile = target_service["name"]
         target_profile_port = target_service["port"]
-        start_fuzzing(target_addr, target_service, target_protocol, target_profile, target_profile_port)
+        start_fuzzing(target_addr, target_protocol, target_profile, target_profile_port)

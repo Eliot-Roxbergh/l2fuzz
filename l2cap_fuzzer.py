@@ -1082,8 +1082,8 @@ def l2cap_fuzzing(bt_addr, profile, port, test_info):
 
                 # In case an unexpected error, reset BT adapter and continue testing (a bit ugly)
                 except Exception as exception:
-                    print(f"ERR: unexpected: {exception}")
-                    print(f"INFO: reopening bluetooth socket")
+                    print("ERR: unexpected: {exception}")
+                    print("INFO: reopening bluetooth socket")
 
                     # arbitrary wait
                     time.sleep(2)
