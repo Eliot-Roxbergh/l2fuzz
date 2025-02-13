@@ -5,7 +5,9 @@ A stateful fuzzer to detect vulnerabilities in Bluetooth BR/EDR Logical Link Con
 
 ## Prerequisites
 
-L2Fuzz original repo used python3.6.9 and scapy 2.4.4 (if something breaks rollback to these versions?). Also, it uses a Bluetooth dongle.
+L2Fuzz original repo used python3.6.9 and scapy 2.4.4 (if something breaks rollback to these versions?).
+
+L2Fuzz targets L2CAP on Bluetooth Classic. It uses any Bluetooth dongle/device available to the system.
 
 ```bash
 # Installation
@@ -28,6 +30,10 @@ source venv/bin/activate
 # arg 1: target mac
 # arg 2: numeric index of profile starting at 0
 python3 l2fuzz.py AA:BB:CC:DD:EE:FF 0
+
+# alternatively scan all services
+# arg 2: "all"
+python3 l2fuzz.py AA:BB:CC:DD:EE:FF all
 ```
 
 ## Running the tests: interactive mode
@@ -50,7 +56,7 @@ Performing classic bluetooth inquiry scan...
 	01.	11:22:33:44:55:66	  Smartphone    	Smartphone	      	Vendor B
 	Found 2 devices
 
-Choose Device : 
+Choose Device : 0
 ```
 4. Choose target service which is supported by L2CAP.
 
@@ -64,12 +70,14 @@ Start scanning services...
 	03. [0x0003]: Service D
 	04. [0x0004]: Service E
 	05. [0x0005]: Service F
-	
-Select a profile to fuzz : 
+
+Select a profile to fuzz : 4
 ```
 5. Fuzz testing start.
 
 ### End test
+
+The test does not end by itself, interrupt to print logs and exit:
 
 ```
 Ctrl + C
@@ -77,7 +85,10 @@ Ctrl + C
 
 ### Log file
 
-The log file will be generated after the fuzz testing in L2Fuzz folder.
+The log file will only be generated after the fuzz testing is complete, stored in the L2Fuzz folder.
+
+On a detected crash, further pings are sent, if and only if these also fail is the packet noted as a "crash" in the log.
+Otherwise, the crash is not marked as such, likely since single failures could be due to interference or issues with the local adapter.
 
 ## Paper
 
