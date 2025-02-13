@@ -407,6 +407,8 @@ def send_pkt(bt_addr, sock, pkt, cmd_code, state):
             pkt_info["sended?"] = "n"
             pkt_info["crash"] = "y"
             pkt_info["crash_info"] = "ConnectionResetError"
+        else:
+            print("INFO: connection failed but it went up quickly again, not a hard crash.")
 
     except ConnectionRefusedError:
         print("[-] Crash Found - ConnectionRefusedError detected")
@@ -423,6 +425,8 @@ def send_pkt(bt_addr, sock, pkt, cmd_code, state):
             pkt_info["sended?"] = "n"
             pkt_info["crash"] = "y"
             pkt_info["crash_info"] = "ConnectionRefusedError"
+        else:
+            print("INFO: connection failed but it went up quickly again, not a hard crash.")
 
     except ConnectionAbortedError:
         print("[-] Crash Found - ConnectionAbortedError detected")
@@ -439,6 +443,8 @@ def send_pkt(bt_addr, sock, pkt, cmd_code, state):
             pkt_info["sended?"] = "n"
             pkt_info["crash"] = "y"
             pkt_info["crash_info"] = "ConnectionAbortedError"
+        else:
+            print("INFO: connection failed but it went up quickly again, not a hard crash.")
 
     except TimeoutError:
         # State Timeout
@@ -1035,7 +1041,7 @@ def l2cap_fuzzing(bt_addr, profile, port, test_info):
         return
 
     with open(
-        "log_{}.wfl".format(test_info["starting_time"][11:19].replace(":", "", 2)),
+        "log_port{}_{}.wfl".format(port, test_info["starting_time"][11:19].replace(":", "", 2)),
         "w",
         encoding="utf-8",
     ) as f:
