@@ -370,21 +370,7 @@ def bluetooth_services_and_protocols_search(bt_addr):
     return serv_chosen
 
 
-if __name__ == "__main__":
-    # targetting
-    if len(sys.argv) > 2:
-        target_protocol = "L2CAP"
-        target_addr = sys.argv[1]
-        target_profile = "L2CAP" # Doesn't matter - not used
-        target_profile_port = int(sys.argv[2])
-    else:
-        bluetooth_reset()
-        target_addr = bluetooth_classic_scan()
-        target_service = bluetooth_services_and_protocols_search(target_addr)
-        target_protocol = target_service["protocol"]
-        target_profile = target_service["name"]
-        target_profile_port = target_service["port"]
-
+def start_fuzzing(target_addr, target_service, target_protocol, target_profile, target_profile_port):
     print("\n===================Test Information===================")
     print(json.dumps(test_info, ensure_ascii=False, indent="\t"))
     print("======================================================\n")
@@ -394,3 +380,64 @@ if __name__ == "__main__":
         l2cap_fuzzing(target_addr, target_profile, target_profile_port, test_info)
     else:
         print("Not Supported")
+
+
+if __name__ == "__main__":
+
+    # optional: restart bluetooth chip
+    #bluetooth_reset()
+
+    # Command line mode
+    if len(sys.argv) > 2:
+        target_protocol = "L2CAP"
+        target_addr = sys.argv[1]
+        target_profile = "L2CAP" # Doesn't matter - not used
+
+        # Fuzz all ports
+        if sys.argv[2] = "all":
+            # find all services on target
+            print("Looking for services on ", target_addr)
+            services = bluetooth.find_service(address=target_addr)
+            if len(services) <= 0:
+                sys.exit("No services (of any type) found on target")
+            i = 0
+            for serv in services:
+                if serv["protocol"] != "L2CAP":
+                    del services[i]
+                    continue
+                active_profile=serv["profiles"]
+                if len(active_profile) == 0:
+                    print("\t%02d. [None]: %s" % (i, serv["name"]))
+                else:
+                    print("\t%02d. [0x%s]: %s" % (i, serv["profiles"][0][0], serv["name"]))
+                i += 1
+
+            if not services:
+                sys.exit("No L2CAP services found on target")
+
+            # fuzz all services found
+            for serv in services:
+                if len(active_profile) == 0:
+                    print("Starting to fuzz target")
+                    print("\t%02d. [None]: %s" % (i, serv["name"]))
+                    print("...")
+                else:
+                    print("Starting to fuzz target")
+                    print("\t%02d. [0x%s]: %s" % (i, serv["profiles"][0][0], serv["name"]))
+                    print("...")
+                i += 1
+                target_profile_port = serv["port"]
+                start_fuzzing(target_addr, target_service, target_protocol, target_profile, target_profile_port)
+        # Fuzz given port only
+        else:
+            target_profile_port = int(sys.argv[2])
+            start_fuzzing(target_addr, target_service, target_protocol, target_profile, target_profile_port)
+
+    # Iteractive mode
+    else:
+        target_addr = bluetooth_classic_scan()
+        target_service = bluetooth_services_and_protocols_search(target_addr)
+        target_protocol = target_service["protocol"]
+        target_profile = target_service["name"]
+        target_profile_port = target_service["port"]
+        start_fuzzing(target_addr, target_service, target_protocol, target_profile, target_profile_port)
