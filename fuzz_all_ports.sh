@@ -5,6 +5,7 @@ readonly services_file="l2fuzz_open_ports.tmp"
 # $1 should be a valid bluetooth address
 if [ -z "$1" ]; then
 	echo "First argument should be Bluetooth address of target (in format 00:FF:00:FF:00:FF)"
+	echo "$0 00:FF:00:FF:00:FF"
 	exit 1
 fi
 bt_addr="$1"

@@ -5,9 +5,7 @@ A stateful fuzzer to detect vulnerabilities in Bluetooth BR/EDR Logical Link Con
 
 ## Prerequisites
 
-L2Fuzz original repo used python3.6.9 and scapy 2.4.4 (if something breaks rollback to these versions?).
-
-L2Fuzz targets L2CAP on Bluetooth Classic. It uses any Bluetooth dongle/device available to the system.
+L2Fuzz targets L2CAP on Bluetooth Classic. It uses any (the first?) Bluetooth dongle/device available to the system.
 
 ```bash
 # Installation
@@ -15,25 +13,29 @@ sudo apt-get install bluetooth libbluetooth-dev python3-pip -y
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-
-# Running the tool
-sudo su
-source venv/bin/activate
-python3 l2fuzz.py
 ```
+
+L2Fuzz original repo used python3.6.9 and scapy 2.4.4 (if something breaks rollback to these versions?).
 
 ## Running the tests: command line
 ```
 sudo su
 source venv/bin/activate
 
+# Interactive mode
+python3 l2fuzz.py
+
+# Target specific port
 # arg 1: target mac
 # arg 2: numeric index of profile starting at 0
 python3 l2fuzz.py AA:BB:CC:DD:EE:FF 0
 
-# alternatively scan all services
-# arg 2: "all"
-python3 l2fuzz.py AA:BB:CC:DD:EE:FF all
+# Scan ONLY services
+# arg 2: "scan-only"
+python3 l2fuzz.py AA:BB:CC:DD:EE:FF scan-only
+
+# Scan all services on ports that seem open
+./fuzz_all_ports.sh AA:BB:CC:DD:EE:FF
 ```
 
 ## Running the tests: interactive mode
