@@ -382,14 +382,30 @@ def start_fuzzing(target_addr, target_protocol, target_profile, target_profile_p
         print("Not Supported")
 
 
+def is_bluetooth_up():
+    try:
+        bluetooth.discover_devices(duration=2)
+    except OSError as e:
+        print(f"[-] No Bluetooth adapter. Restarting Bluetooth..")
+        return False
+    except Exception as e:
+        print(f"[-] Unexpected Bluetooth error, giving up!: {e}")
+        sys.exit(1)
+    return True
+
+def ensure_bluetooth_up():
+    while(not is_bluetooth_up()):
+        bluetooth_reset()
+
 if __name__ == "__main__":
 
     #print("\n===================Test Information===================")
     #print(json.dumps(test_info, ensure_ascii=False, indent="\t"))
     #print("======================================================\n")
 
-    # optional: restart bluetooth chip
-    #bluetooth_reset()
+    # optional: restart bluetooth chip and ensure it's up
+    bluetooth_reset()
+    ensure_bluetooth_up()
 
     # Command line mode
     if len(sys.argv) > 2:
