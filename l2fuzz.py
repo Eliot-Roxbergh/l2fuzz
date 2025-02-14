@@ -22,13 +22,13 @@ def bluetooth_reset():
     """
     Reset linux bluetooth
     """
-    print("\nReset Bluetooth...")
+    print("[-] Resetting Bluetooth")
     os.system("sudo rfkill block bluetooth")  # Disable device
-    os.system("sudo rm -r /var/lib/bluetooth/*")  # Clear addresses
+    os.system("sudo rm -r /var/lib/bluetooth/* 2> /dev/null")  # Clear addresses
     os.system("sudo rfkill unblock bluetooth")  # Enable device
     os.system("sudo systemctl restart bluetooth")  # Restart bluetooth service
     test_info["reset"] = "Y"
-    time.sleep(3)
+    time.sleep(3) # Arbitrary, can likely remove
 
 
 def bluetooth_class_of_device(device_class):
@@ -331,22 +331,25 @@ def bluetooth_services_and_protocols_search(bt_addr):
     print("\n\tList of profiles for the device")
 
     services = bluetooth.find_service(address=bt_addr)
+
     # print(services)
     if len(services) <= 0:
-        print("No services found")
-        return {"protocol": "None", "name": "None", "port": "None"}
+        print("\tNo services found!")
+        #print("\t'protocol': 'None', 'name': 'None', 'port': 'None'")
+        print("Giving up, no services found. Perhaps try again..")
+        sys.exit(1)
     else:
         i = 0
         for serv in services:
-            # print(f"{serv=}")
+            #print(f"{serv=}")
             if serv["protocol"] != "L2CAP":
                 i += 1
                 continue
 
             if len(serv["profiles"]) == 0:
-                print("\t%02d. [None]: %s" % (i, serv["name"]))
+                print("\t%02d. [None]: %s (port %d)" % (i, serv["name"], serv["port"]))
             else:
-                print("\t%02d. [0x%s]: %s" % (i, serv["profiles"][0][0], serv["name"]))
+                print("\t%02d. [0x%s]: %s (port %d)" % (i, serv["profiles"][0][0], serv["name"], serv["port"]))
             i += 1
 
     while True:
@@ -381,9 +384,9 @@ def start_fuzzing(target_addr, target_protocol, target_profile, target_profile_p
 
 if __name__ == "__main__":
 
-    print("\n===================Test Information===================")
-    print(json.dumps(test_info, ensure_ascii=False, indent="\t"))
-    print("======================================================\n")
+    #print("\n===================Test Information===================")
+    #print(json.dumps(test_info, ensure_ascii=False, indent="\t"))
+    #print("======================================================\n")
 
     # optional: restart bluetooth chip
     #bluetooth_reset()
@@ -439,15 +442,25 @@ if __name__ == "__main__":
                 print("\n\n\n")
         # Fuzz given port only
         else:
+            print("\n====================TARGET START=====================")
             target_profile_port = int(sys.argv[2])
+            print("Fuzzing target: ", target_addr, target_protocol, target_profile, target_profile_port)
+            print("\n\n")
+
             start_fuzzing(target_addr, target_protocol, target_profile, target_profile_port)
 
     # Iteractive mode
     else:
-        print("Fuzzing target: ", target_addr, target_protocol, target_profile, target_profile_port)
+        #print("\n===================Test Information===================")
+        #print(json.dumps(test_info, ensure_ascii=False, indent="\t"))
+        #print("======================================================\n")
+        print("\n====================TARGET START=====================")
         target_addr = bluetooth_classic_scan()
         target_service = bluetooth_services_and_protocols_search(target_addr)
         target_protocol = target_service["protocol"]
         target_profile = target_service["name"]
         target_profile_port = target_service["port"]
+        print("Fuzzing target: ", target_addr, target_protocol, target_profile, target_profile_port)
+        print("\n\n")
+
         start_fuzzing(target_addr, target_protocol, target_profile, target_profile_port)
