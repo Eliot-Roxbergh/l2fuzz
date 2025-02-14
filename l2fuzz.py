@@ -323,6 +323,66 @@ def bluetooth_classic_scan():
     return addr_chosen
 
 
+# Manually try all possible CIDs, as SDP may not show all available services
+def find_service(bt_addr):
+    open_channels = []
+    
+    # Note that, as I remember, 0 is reserved and never work
+    start_cid = 0
+    end_cid = 10 #65535
+    print(f"Trying to connect to {bt_addr} on PSM ports: Working..")
+    for port in range(start_cid, end_cid):
+        sock = bluetooth.BluetoothSocket(bluetooth.L2CAP)
+
+        try:
+            sock.connect((bt_addr, port))
+            print(f"PSM {port:#x} ({port}) open")
+            open_channels.append(port)
+            sock.close()
+        except bluetooth.btcommon.BluetoothError as e:
+            pass
+        except ValueError as e:
+            # The PSM isn't valid for some reason
+            pass
+        except Exception as e:
+            print(e)
+
+    print("\nOpen L2CAP Channels:", open_channels)
+    return open_channels
+
+
+def find_all_services(bt_addr):
+
+    # Manually try connect to each channel
+    services_m = find_service(bt_addr)
+    print("\n\n")
+
+    # Services reported open by SDP
+    services_s = []
+    services_structs = bluetooth.find_service(address=bt_addr)
+    i = 0
+    print("SDP reports open:")
+    for serv in services_structs:
+        port=serv["port"]
+        if serv["protocol"] != "L2CAP":
+            del services_structs[i]
+            continue
+        if len(serv["profiles"]) == 0:
+            print("\t%d. [None]: %s - Port %d open" % (i, serv["name"], port))
+        else:
+            print("\t%d. [0x%s]: %s - Port %d open" % (i, serv["profiles"][0][0], serv["name"], port))
+        i += 1
+        services_s.append(port)
+    print("\n")
+
+    # All ports with potential services: combine lists and remove duplicates
+    all_services = list(set(services_m+services_s))
+    print("All ports discovered open (L2CAP): ", all_services)
+    return all_services
+
+# TODO use find_all_services to also do the manual connection check.
+#       This is currently done when calling the program in "command line mode",
+#       but not for this - the "interactive mode"
 def bluetooth_services_and_protocols_search(bt_addr):
     """
     Search the services and protocols of device
@@ -330,6 +390,7 @@ def bluetooth_services_and_protocols_search(bt_addr):
     print("\nStart scanning services...")
     print("\n\tList of profiles for the device")
 
+    #services = find_all_services(bt_addr)
     services = bluetooth.find_service(address=bt_addr)
 
     # print(services)
@@ -413,50 +474,18 @@ if __name__ == "__main__":
         target_addr = sys.argv[1]
         target_profile = "none" # Doesn't matter - not used
 
-        # Fuzz all ports
-        if sys.argv[2] == "all":
+        # Scan only (L2CAP services only)
+        if sys.argv[2] == "scan-only":
+            print("\n====================SCANNING START====================")
             # find all services on target
             print("Service scan for", target_addr)
-            services = bluetooth.find_service(address=target_addr)
-            if len(services) <= 0:
-                sys.exit("No services (of any type) found on target")
-            i = 0
-            for serv in services:
-                if serv["protocol"] != "L2CAP":
-                    del services[i]
-                    continue
-                active_profile=serv["profiles"]
-                if len(active_profile) == 0:
-                    print("\t%d. [None]: %s" % (i, serv["name"]))
-                else:
-                    print("\t%d. [0x%s]: %s" % (i, serv["profiles"][0][0], serv["name"]))
-                i += 1
-            print("\n\n")
+            services = find_all_services(target_addr)
+            file="l2fuzz_open_ports.tmp"
+            with open(file, "w") as f:
+                f.write(" ".join(map(str, services)))
+            print("Open services saved to working dir:", file)
 
-            if not services:
-                sys.exit("No L2CAP services found on target")
-
-            # fuzz all services found
-            i = 0
-            for serv in services:
-                print("\n====================TARGET START=====================")
-                #print(f"{serv}")
-                target_profile_port = serv["port"]
-                if len(serv["profiles"]) == 0:
-                    print("Starting to fuzz target: %d. [None]: %s" % (i, serv["name"]))
-                    print("Port:", target_profile_port)
-                else:
-                    print("Starting to fuzz target: %d. [0x%s]: %s" % (i, serv["profiles"][0][0], serv["name"]))
-                    print("Port:", target_profile_port)
-                i += 1
-                try:
-                    start_fuzzing(target_addr, target_protocol, target_profile, target_profile_port)
-                except ConnectionRefusedError as e:
-                    print(f"[!] 'Target may not accept connections on port {target_profile_port}? Got {e}")
-                except Exception as e:
-                    print(f"[!] Unexpected error: {e}")
-                print("\n\n\n")
-        # Fuzz given port only
+        # Fuzz given port
         else:
             print("\n====================TARGET START=====================")
             target_profile_port = int(sys.argv[2])
