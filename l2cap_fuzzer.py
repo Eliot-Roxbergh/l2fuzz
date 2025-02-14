@@ -1089,8 +1089,8 @@ def l2cap_fuzzing(bt_addr, profile, port, test_info):
                     disconnection_state_fuzzing(bt_addr, sock, state_machine, port, logger)
 
                 except KeyError as exception:
-                    print(f"[-] Got exception KeyError: {exception}")
-                    print(f"[-] Catch programmer errors, this should never happen")
+                    print(f"[-] Got exception KeyError: {exception}.")
+                    print(f"[-] Catch programmer errors, this should never happen.")
                     exit(1)
 
                 # In case an unexpected error, reset BT socket/state and continue testing (a bit ugly)
@@ -1107,7 +1107,7 @@ def l2cap_fuzzing(bt_addr, profile, port, test_info):
 
                     # arbitrary wait
                     time.sleep(2)
-                    #print(f"[!] restarted bluetooth")
+                    #print(f"[!] restarted bluetooth socket")
 
         # (This should not be possible any longer due to above except)
         except Exception as exception:

@@ -326,11 +326,16 @@ def bluetooth_classic_scan():
 # Manually try all possible CIDs, as SDP may not show all available services
 def find_service(bt_addr):
     open_channels = []
-    
+
     # Note that, as I remember, 0 is reserved and never work
     start_cid = 0
-    end_cid = 10 #65535
-    print(f"Trying to connect to {bt_addr} on PSM ports: Working..")
+    end_cid = 65535 #max 65535
+
+    # TODO: should we ignore even numbers if they are always supposedly invalid?
+
+    print("\nTODO: I had issue that scanning took a long time, as each open port created a pairing prompt that needed to timeout or be closed manually. Why?\nIf so, you may want to limit searches, or disabled this feature.")
+
+    print(f"Trying to connect to {bt_addr} on PSM ports {start_cid} to {end_cid}:\nWorking..")
     for port in range(start_cid, end_cid):
         sock = bluetooth.BluetoothSocket(bluetooth.L2CAP)
 
@@ -465,7 +470,7 @@ if __name__ == "__main__":
     #print("======================================================\n")
 
     # optional: restart bluetooth chip and ensure it's up
-    bluetooth_reset()
+    #bluetooth_reset()
     ensure_bluetooth_up()
 
     # Command line mode
@@ -484,6 +489,7 @@ if __name__ == "__main__":
             with open(file, "w") as f:
                 f.write(" ".join(map(str, services)))
             print("Open services saved to working dir:", file)
+            sys.exit(0)
 
         # Fuzz given port
         else:
@@ -491,8 +497,6 @@ if __name__ == "__main__":
             target_profile_port = int(sys.argv[2])
             print("Fuzzing target: ", target_addr, target_protocol, target_profile, target_profile_port)
             print("\n\n")
-
-            start_fuzzing(target_addr, target_protocol, target_profile, target_profile_port)
 
     # Iteractive mode
     else:
@@ -508,4 +512,20 @@ if __name__ == "__main__":
         print("Fuzzing target: ", target_addr, target_protocol, target_profile, target_profile_port)
         print("\n\n")
 
-        start_fuzzing(target_addr, target_protocol, target_profile, target_profile_port)
+    # Retry fuzzing a few times on common errors
+    # TODO: note I'm not sure what effect running the fuzzer multiple times has, as it seems to preserve some kind of state (?)
+    for i in range(0,5):
+        try:
+            start_fuzzing(target_addr, target_protocol, target_profile, target_profile_port)
+            sys.exit(0) # success
+        except PermissionError as e:
+            print(f"[-] Unexpected exception {e}, usually due to local Bluetooth adapter.")
+            print("[-] Restarting Bluetooth adapter and trying again...")
+            bluetooth_reset()
+            ensure_bluetooth_up()
+        except OSError as e:
+            print(f"[-] Unexpected {e}, ensure that host is up?")
+            print("[-] Restarting Bluetooth adapter and trying again...")
+            time.sleep(2)
+            bluetooth_reset()
+            ensure_bluetooth_up()
