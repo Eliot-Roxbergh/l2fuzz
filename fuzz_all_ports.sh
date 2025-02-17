@@ -1,5 +1,13 @@
 #!/bin/bash
 # Fuzz all open L2CAP ports on a target bluetooth address
+#
+# NOTE:
+# 	This is terribly inefficient since L2Fuzz scans random channels most of the time.
+# 	Only some requests (for some specific state machine state fuzzing) uses the given channel ID (i.e. PSM).
+# 	Still, as an ugly hack this doesn't hurt: if we have time, fuzzing additional random PSMs doesn't hurt.
+#
+# 	If you wish to only scan given channel, see l2cap_fuzzer.py and requests that use 'psm=port' and not 'psm=random_psm()'
+
 readonly services_file="l2fuzz_open_ports.tmp"
 
 # $1 should be a valid bluetooth address
@@ -26,6 +34,6 @@ read -r -a services < "$services_file"
 
 
 # Fuzz each open port on target
-for item in "${services[@]}"; do
-	python3 l2fuzz.py "$bt_addr" $item
+for port in "${services[@]}"; do
+    python3 l2fuzz.py "$bt_addr" $port
 done
