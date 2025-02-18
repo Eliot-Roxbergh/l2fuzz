@@ -1,8 +1,7 @@
 import subprocess
 import json
 
-#tmp erox
-import time
+import time, os
 
 from datetime import datetime
 
@@ -368,7 +367,7 @@ def log_pkt(pkt):
     return pkt_garbage_updated
 
 
-def send_pkt(bt_addr, sock, pkt, cmd_code, state):
+def send_pkt(bt_addr, sock, pkt, cmd_code, state, port):
     """
     Errno
             ConnectionResetError: [Errno 104] Connection reset by peer
@@ -380,6 +379,7 @@ def send_pkt(bt_addr, sock, pkt, cmd_code, state):
     global crash_cnt
     pkt_cnt += 1
     pkt_info = ""
+    port = str(port) #might not be necessary?
 
     try:
         sock.send(pkt)
@@ -396,18 +396,21 @@ def send_pkt(bt_addr, sock, pkt, cmd_code, state):
         print("[-] Crash Found - ConnectionResetError detected")
         # Hard error: log for investigation!
         if l2ping(bt_addr) == False:
+            time = str(datetime.now())
             print("Crash Packet :", pkt)
             crash_cnt += 1
             pkt_info = {}
             pkt_info["no"] = pkt_cnt
             pkt_info["protocol"] = "L2CAP"
-            pkt_info["sended_time"] = str(datetime.now())
+            pkt_info["sended_time"] = time
             pkt_info["cmd"] = L2CAP_CmdDict.get(cmd_code, "reserved for future use")
             pkt_info["payload"] = log_pkt(pkt)
             pkt_info["l2cap_state"] = state
             pkt_info["sended?"] = "n"
             pkt_info["crash"] = "y"
             pkt_info["crash_info"] = "ConnectionResetError"
+            pkt_info["current_port"] = port
+            dump_adb_logs(time, port)
         # Transient error: likely uninteresting, don't log
         else:
             print("[-] The connection failed but it went up quickly again, this was not a hard crash (will not be marked as 'crash' in log).")
@@ -417,17 +420,20 @@ def send_pkt(bt_addr, sock, pkt, cmd_code, state):
         # Hard error: log for investigation!
         if l2ping(bt_addr) == False:
             print("Crash Packet :", pkt)
+            time = str(datetime.now())
             crash_cnt += 1
             pkt_info = {}
             pkt_info["no"] = pkt_cnt
             pkt_info["protocol"] = "L2CAP"
-            pkt_info["sended_time"] = str(datetime.now())
+            pkt_info["sended_time"] = time
             pkt_info["cmd"] = L2CAP_CmdDict.get(cmd_code, "reserved for future use")
             pkt_info["payload"] = log_pkt(pkt)
             pkt_info["l2cap_state"] = state
             pkt_info["sended?"] = "n"
             pkt_info["crash"] = "y"
             pkt_info["crash_info"] = "ConnectionRefusedError"
+            pkt_info["current_port"] = port
+            dump_adb_logs(time, port)
         # Transient error: likely uninteresting, don't log
         else:
             print("[-] The connection failed but it went up quickly again, this was not a hard crash (will not be marked as 'crash' in log).")
@@ -437,17 +443,20 @@ def send_pkt(bt_addr, sock, pkt, cmd_code, state):
         # Hard error: log for investigation!
         if l2ping(bt_addr) == False:
             print("Crash Packet :", pkt)
+            time = str(datetime.now())
             crash_cnt += 1
             pkt_info = {}
             pkt_info["no"] = pkt_cnt
             pkt_info["protocol"] = "L2CAP"
-            pkt_info["sended_time"] = str(datetime.now())
+            pkt_info["sended_time"] = time
             pkt_info["cmd"] = L2CAP_CmdDict.get(cmd_code, "reserved for future use")
             pkt_info["payload"] = log_pkt(pkt)
             pkt_info["l2cap_state"] = state
             pkt_info["sended?"] = "n"
             pkt_info["crash"] = "y"
             pkt_info["crash_info"] = "ConnectionAbortedError"
+            pkt_info["current_port"] = port
+            dump_adb_logs(time, port)
         # Transient error: likely uninteresting, don't log
         else:
             print("[-] The connection failed but it went up quickly again, this was not a hard crash (will not be marked as 'crash' in log).")
@@ -457,17 +466,20 @@ def send_pkt(bt_addr, sock, pkt, cmd_code, state):
         # State Timeout
         print("[-] Crash Found - TimeoutError detected")
         print("Crash Packet :", pkt)
+        time = str(datetime.now())
         crash_cnt += 1
         pkt_info = {}
         pkt_info["no"] = pkt_cnt
         pkt_info["protocol"] = "L2CAP"
-        pkt_info["sended_time"] = str(datetime.now())
+        pkt_info["sended_time"] = time
         pkt_info["cmd"] = L2CAP_CmdDict.get(cmd_code, "reserved for future use")
         pkt_info["payload"] = log_pkt(pkt)
         pkt_info["l2cap_state"] = state
         pkt_info["sended?"] = "n"
         pkt_info["crash"] = "y"
         pkt_info["crash_info"] = "TimeoutError"
+        pkt_info["current_port"] = port
+        dump_adb_logs(time, port)
 
     except OSError as e:
         """
@@ -478,11 +490,12 @@ def send_pkt(bt_addr, sock, pkt, cmd_code, state):
         if "Host is down" in e.__doc__:
             print("[-] Crash Found - Host is down")
             print("Crash Packet :", pkt)
+            time = str(datetime.now())
             crash_cnt += 1
             pkt_info = {}
             pkt_info["no"] = pkt_cnt
             pkt_info["protocol"] = "L2CAP"
-            pkt_info["sended_time"] = str(datetime.now())
+            pkt_info["sended_time"] = time
             pkt_info["cmd"] = L2CAP_CmdDict.get(cmd_code, "reserved for future use")
             pkt_info["payload"] = log_pkt(pkt)
             pkt_info["l2cap_state"] = state
@@ -490,8 +503,10 @@ def send_pkt(bt_addr, sock, pkt, cmd_code, state):
             pkt_info["crash"] = "y"
             pkt_info["DoS"] = "y"
             pkt_info["crash_info"] = "OSError - Host is down"
+            pkt_info["current_port"] = port
             print("[-] Crash packet causes HOST DOWN. Test finished.")
-            #TODO exit program here if host is in fact down ?
+            dump_adb_logs(time, port)
+            #TODO exit program (and save logs) here if host is in fact down ?
         # OS Error: likely a local issue. TODO could this be interesting? If so which other types of errors?
         else:
             print(f"[!] Unknown issue, got OS error when sending packet: {e}")
@@ -566,13 +581,14 @@ def connection_state_fuzzing(bt_addr, sock, state_machine, packet_info):
     # 1) Target State : Wait Connect State
     for i in range(0, iteration):
         cmd_code = 0x02
+        random_port = random_psm()
         pkt = (
             L2CAP_CmdHdr(code=cmd_code)
-            / new_L2CAP_ConnReq(psm=random_psm())
+            / new_L2CAP_ConnReq(psm=random_port)
             / garbage_value(garbage=randrange(0x0000, 0x10000))
         )
         sock, pkt_info = send_pkt(
-            bt_addr, sock, pkt, cmd_code, state_machine.current_state.name
+            bt_addr, sock, pkt, cmd_code, state_machine.current_state.name, random_port
         )
         if pkt_info == "":
             pass
@@ -589,8 +605,9 @@ def connection_state_fuzzing(bt_addr, sock, state_machine, packet_info):
             )
             / garbage_value(garbage=randrange(0x0000, 0x10000))
         )
+        # I assume that the ConnResp uses same PSM (port) as used above in ConnReq?
         sock, pkt_info = send_pkt(
-            bt_addr, sock, pkt, cmd_code, state_machine.current_state.name
+            bt_addr, sock, pkt, cmd_code, state_machine.current_state.name, random_port
         )
         if pkt_info == "":
             pass
@@ -606,14 +623,15 @@ def creation_state_fuzzing(bt_addr, sock, state_machine, packet_info):
     # 2) Target State : Wait Create State
     for i in range(0, iteration):
         cmd_code = 0x0C
+        random_port = random_psm()
         pkt = (
             L2CAP_CmdHdr(code=cmd_code)
-            / L2CAP_Create_Channel_Request(psm=random_psm())
+            / L2CAP_Create_Channel_Request(psm=random_port)
             / garbage_value(garbage=randrange(0x0000, 0x10000))
         )
 
         sock, pkt_info = send_pkt(
-            bt_addr, sock, pkt, cmd_code, state_machine.current_state.name
+            bt_addr, sock, pkt, cmd_code, state_machine.current_state.name, random_port
         )
         if pkt_info == "":
             pass
@@ -631,8 +649,9 @@ def creation_state_fuzzing(bt_addr, sock, state_machine, packet_info):
             / garbage_value(garbage=randrange(0x0000, 0x10000))
         )
 
+        # I assume that the ConnResp uses same PSM (port) as used above in ConnReq?
         sock, pkt_info = send_pkt(
-            bt_addr, sock, pkt, cmd_code, state_machine.current_state.name
+            bt_addr, sock, pkt, cmd_code, state_machine.current_state.name, random_port
         )
         if pkt_info == "":
             pass
@@ -652,7 +671,7 @@ def configuration_state_fuzzing(
         cmd_code = 0x02
         pkt = L2CAP_CmdHdr(code=cmd_code) / new_L2CAP_ConnReq(psm=port, scid=OUR_LOCAL_SCID)
         sock, pkt_info = send_pkt(
-            bt_addr, sock, pkt, cmd_code, state_machine.current_state.name
+            bt_addr, sock, pkt, cmd_code, state_machine.current_state.name, port
         )
         if pkt_info == "":
             pass
@@ -709,7 +728,7 @@ def configuration_state_fuzzing(
 
         # logging, real sending(fuzzing in wait config state)
         sock, pkt_info = send_pkt(
-            bt_addr, sock, pkt4fuzz, cmd_code, state_machine.current_state.name
+            bt_addr, sock, pkt4fuzz, cmd_code, state_machine.current_state.name, port
         )
         if pkt_info == "":
             pass
@@ -723,7 +742,7 @@ def configuration_state_fuzzing(
     cmd_code = 0x04
     pkt = L2CAP_CmdHdr(code=cmd_code) / L2CAP_ConfReq(dcid=dcid_value)
     sock, pkt_info = send_pkt(
-        bt_addr, sock, pkt, cmd_code, state_machine.current_state.name
+        bt_addr, sock, pkt, cmd_code, state_machine.current_state.name, port
     )
     if pkt_info == "":
         pass
@@ -745,7 +764,7 @@ def configuration_state_fuzzing(
 
         # logging, real sending here (fuzzing in wait send config state)
         sock, pkt_info = send_pkt(
-            bt_addr, sock, pkt4fuzz, cmd_code, state_machine.current_state.name
+            bt_addr, sock, pkt4fuzz, cmd_code, state_machine.current_state.name, port
         )
         if pkt_info == "":
             pass
@@ -767,7 +786,7 @@ def configuration_state_fuzzing(
 
         # logging, real sending here (fuzzing in wait send config state)
         sock, pkt_info = send_pkt(
-            bt_addr, sock, pkt4fuzz, cmd_code, state_machine.current_state.name
+            bt_addr, sock, pkt4fuzz, cmd_code, state_machine.current_state.name, port
         )
         if pkt_info == "":
             pass
@@ -778,7 +797,7 @@ def configuration_state_fuzzing(
     cmd_code = 0x05
     pkt = L2CAP_CmdHdr(code=cmd_code) / L2CAP_ConfResp(scid=dcid_value)
     sock, pkt_info = send_pkt(
-        bt_addr, sock, pkt, cmd_code, state_machine.current_state.name
+        bt_addr, sock, pkt, cmd_code, state_machine.current_state.name, port
     )
     if pkt_info == "":
         pass
@@ -792,17 +811,18 @@ def configuration_state_fuzzing(
     opt = randint(0, 1)
     if opt == 0:
         for i in range(0, iteration):
+            random_port = random_psm()
             # ConnReq(fail)
             cmd_code = 0x02
             pkt = (
                 L2CAP_CmdHdr(code=cmd_code)
-                / new_L2CAP_ConnReq(psm=random_psm())
+                / new_L2CAP_ConnReq(psm=random_port)
                 / garbage_value(garbage=randrange(0x0000, 0x10000))
             )
 
             # logging, real sending here
             sock, pkt_info = send_pkt(
-                bt_addr, sock, pkt, cmd_code, state_machine.current_state.name
+                bt_addr, sock, pkt, cmd_code, state_machine.current_state.name, random_port
             )
             if pkt_info == "":
                 pass
@@ -813,7 +833,7 @@ def configuration_state_fuzzing(
         cmd_code = 0x02
         pkt = L2CAP_CmdHdr(code=cmd_code) / new_L2CAP_ConnReq(psm=port, scid=OUR_LOCAL_SCID)
         sock, pkt_info = send_pkt(
-            bt_addr, sock, pkt, cmd_code, state_machine.current_state.name
+            bt_addr, sock, pkt, cmd_code, state_machine.current_state.name, port
         )
         if pkt_info == "":
             pass
@@ -835,7 +855,7 @@ def configuration_state_fuzzing(
 
             # logging, real sending here
             sock, pkt_info = send_pkt(
-                bt_addr, sock, pkt4fuzz, cmd_code, state_machine.current_state.name
+                bt_addr, sock, pkt4fuzz, cmd_code, state_machine.current_state.name, port
             )
             if pkt_info == "":
                 pass
@@ -846,7 +866,7 @@ def configuration_state_fuzzing(
         cmd_code = 0x04
         pkt = L2CAP_CmdHdr(code=cmd_code) / L2CAP_ConfReq(dcid=dcid_value)
         sock, pkt_info = send_pkt(
-            bt_addr, sock, pkt, cmd_code, state_machine.current_state.name
+            bt_addr, sock, pkt, cmd_code, state_machine.current_state.name, port
         )
         if pkt_info == "":
             pass
@@ -868,7 +888,7 @@ def configuration_state_fuzzing(
 
             # logging, real sending here
             sock, pkt_info = send_pkt(
-                bt_addr, sock, pkt4fuzz, cmd_code, state_machine.current_state.name
+                bt_addr, sock, pkt4fuzz, cmd_code, state_machine.current_state.name, port
             )
             if pkt_info == "":
                 pass
@@ -879,7 +899,7 @@ def configuration_state_fuzzing(
         cmd_code = 0x04
         pkt = L2CAP_CmdHdr(code=cmd_code) / L2CAP_ConfReq(dcid=dcid_value)
         sock, pkt_info = send_pkt(
-            bt_addr, sock, pkt, cmd_code, state_machine.current_state.name
+            bt_addr, sock, pkt, cmd_code, state_machine.current_state.name, port
         )
         if pkt_info == "":
             pass
@@ -891,16 +911,17 @@ def configuration_state_fuzzing(
 
         # 4-2) Target State : Wait Control Ind
         for i in range(0, iteration):
+            random_port = random_psm()
             # ConnReq(fail)
             cmd_code = 0x02
             pkt = (
                 L2CAP_CmdHdr(code=cmd_code)
-                / new_L2CAP_ConnReq(psm=random_psm())
+                / new_L2CAP_ConnReq(psm=random_port)
                 / garbage_value(garbage=randrange(0x0000, 0x10000))
             )
             # logging, real sending here
             sock, pkt_info = send_pkt(
-                bt_addr, sock, pkt, cmd_code, state_machine.current_state.name
+                bt_addr, sock, pkt, cmd_code, state_machine.current_state.name, random_port
             )
             if pkt_info == "":
                 pass
@@ -911,7 +932,7 @@ def configuration_state_fuzzing(
         cmd_code = 0x02
         pkt = L2CAP_CmdHdr(code=cmd_code) / new_L2CAP_ConnReq(psm=port, scid=OUR_LOCAL_SCID)
         sock, pkt_info = send_pkt(
-            bt_addr, sock, pkt, cmd_code, state_machine.current_state.name
+            bt_addr, sock, pkt, cmd_code, state_machine.current_state.name, port
         )
         if pkt_info == "":
             pass
@@ -922,7 +943,7 @@ def configuration_state_fuzzing(
         state_machine.w_control_ind_to_open()
 
 
-def shift_state_fuzzing(bt_addr, sock, state_machine, packet_info):
+def shift_state_fuzzing(bt_addr, sock, state_machine, packet_info, port):
     """
     Connection Shift States : Wait Move, Wait Move Confirm, Wait Move Rsp, Wait Confirm Rsp
 
@@ -953,7 +974,7 @@ def shift_state_fuzzing(bt_addr, sock, state_machine, packet_info):
 
         # logging, real sending and state transition here
         sock, pkt_info = send_pkt(
-            bt_addr, sock, pkt, cmd_code, state_machine.current_state.name
+            bt_addr, sock, pkt, cmd_code, state_machine.current_state.name, port
         )
         if pkt_info == "":
             pass
@@ -979,7 +1000,7 @@ def shift_state_fuzzing(bt_addr, sock, state_machine, packet_info):
 
         # logging, real sending and state transition here
         sock, pkt_info = send_pkt(
-            bt_addr, sock, pkt, cmd_code, state_machine.current_state.name
+            bt_addr, sock, pkt, cmd_code, state_machine.current_state.name, port
         )
         if pkt_info == "":
             pass
@@ -1024,7 +1045,7 @@ def disconnection_state_fuzzing(bt_addr, sock, state_machine, port, packet_info)
         )
         # logging, real sending and state transition here
         sock, pkt_info = send_pkt(
-            bt_addr, sock, pkt, cmd_code, state_machine.current_state.name
+            bt_addr, sock, pkt, cmd_code, state_machine.current_state.name, port
         )
         if pkt_info == "":
             pass
@@ -1039,7 +1060,7 @@ def disconnection_state_fuzzing(bt_addr, sock, state_machine, port, packet_info)
 
     # logging, real sending and state transition here
     sock, pkt_info = send_pkt(
-        bt_addr, sock, pkt, cmd_code, state_machine.current_state.name
+        bt_addr, sock, pkt, cmd_code, state_machine.current_state.name, port
     )
     if pkt_info == "":
         pass
@@ -1048,6 +1069,19 @@ def disconnection_state_fuzzing(bt_addr, sock, state_machine, port, packet_info)
 
     # state transition
     state_machine.w_disconn_to_closed()
+
+def dump_adb_logs(time, port):
+    # NOTE! Port is added to each failed requests, however it may be misleading for certain request types
+    #        that does not seem to be utilizing a port at all! In which case it includes user target port regardless.
+    filename=f"crash_port{port}_{time}_.adb.log"
+    print("[-] Hard crash found, search for timestamp in logs to compare")
+    print(f"[-] Time of crash {time}, port {port}")
+    print(f"[-] Trying to save ADB logs to {filename}")
+
+    ret = os.system(f"sudo adb logcat -t 1000 > {filename}")
+    if ret != 0:
+        print(f"ADB logcat may have failed, got exit code {exit_code}")
+    return
 
 def l2cap_fuzzing(bt_addr, profile, port, test_info):
     """
@@ -1092,7 +1126,7 @@ def l2cap_fuzzing(bt_addr, profile, port, test_info):
                     )
 
                     # Connection Shift State Fuzzing (2/4)
-                    shift_state_fuzzing(bt_addr, sock, state_machine, logger)
+                    shift_state_fuzzing(bt_addr, sock, state_machine, logger, port)
 
                     # Disconnection State Fuzzing (1/1)
                     disconnection_state_fuzzing(bt_addr, sock, state_machine, port, logger)
