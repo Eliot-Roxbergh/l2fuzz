@@ -387,7 +387,7 @@ def send_pkt(bt_addr, sock, pkt, cmd_code, state, port):
         pkt_info = {}
         pkt_info["no"] = pkt_cnt
         pkt_info["protocol"] = "L2CAP"
-        pkt_info["sended_time"] = str(datetime.now())
+        pkt_info["time"] = str(datetime.now())
         pkt_info["payload"] = log_pkt(pkt)
         pkt_info["crash"] = "n"
         pkt_info["l2cap_state"] = state
@@ -395,14 +395,14 @@ def send_pkt(bt_addr, sock, pkt, cmd_code, state, port):
     except ConnectionResetError:
         print("[-] Crash Found - ConnectionResetError detected")
         # Hard error: log for investigation!
+        time = str(datetime.now())
         if l2ping(bt_addr) == False:
-            time = str(datetime.now())
             print("Crash Packet :", pkt)
             crash_cnt += 1
             pkt_info = {}
             pkt_info["no"] = pkt_cnt
             pkt_info["protocol"] = "L2CAP"
-            pkt_info["sended_time"] = time
+            pkt_info["time"] = time
             pkt_info["cmd"] = L2CAP_CmdDict.get(cmd_code, "reserved for future use")
             pkt_info["payload"] = log_pkt(pkt)
             pkt_info["l2cap_state"] = state
@@ -416,16 +416,16 @@ def send_pkt(bt_addr, sock, pkt, cmd_code, state, port):
             print("[-] The connection failed but it went up quickly again, this was not a hard crash (will not be marked as 'crash' in log).")
 
     except ConnectionRefusedError:
+        time = str(datetime.now())
         print("[-] Crash Found - ConnectionRefusedError detected")
         # Hard error: log for investigation!
         if l2ping(bt_addr) == False:
             print("Crash Packet :", pkt)
-            time = str(datetime.now())
             crash_cnt += 1
             pkt_info = {}
             pkt_info["no"] = pkt_cnt
             pkt_info["protocol"] = "L2CAP"
-            pkt_info["sended_time"] = time
+            pkt_info["time"] = time
             pkt_info["cmd"] = L2CAP_CmdDict.get(cmd_code, "reserved for future use")
             pkt_info["payload"] = log_pkt(pkt)
             pkt_info["l2cap_state"] = state
@@ -442,13 +442,13 @@ def send_pkt(bt_addr, sock, pkt, cmd_code, state, port):
         print("[-] Crash Found - ConnectionAbortedError detected")
         # Hard error: log for investigation!
         if l2ping(bt_addr) == False:
-            print("Crash Packet :", pkt)
             time = str(datetime.now())
+            print("Crash Packet :", pkt)
             crash_cnt += 1
             pkt_info = {}
             pkt_info["no"] = pkt_cnt
             pkt_info["protocol"] = "L2CAP"
-            pkt_info["sended_time"] = time
+            pkt_info["time"] = time
             pkt_info["cmd"] = L2CAP_CmdDict.get(cmd_code, "reserved for future use")
             pkt_info["payload"] = log_pkt(pkt)
             pkt_info["l2cap_state"] = state
@@ -463,15 +463,15 @@ def send_pkt(bt_addr, sock, pkt, cmd_code, state, port):
 
     # Hard error: log for investigation!
     except TimeoutError:
+        time = str(datetime.now())
         # State Timeout
         print("[-] Crash Found - TimeoutError detected")
         print("Crash Packet :", pkt)
-        time = str(datetime.now())
         crash_cnt += 1
         pkt_info = {}
         pkt_info["no"] = pkt_cnt
         pkt_info["protocol"] = "L2CAP"
-        pkt_info["sended_time"] = time
+        pkt_info["time"] = time
         pkt_info["cmd"] = L2CAP_CmdDict.get(cmd_code, "reserved for future use")
         pkt_info["payload"] = log_pkt(pkt)
         pkt_info["l2cap_state"] = state
@@ -487,15 +487,15 @@ def send_pkt(bt_addr, sock, pkt, cmd_code, state, port):
         OSError: [Errno 112] Host is down
         """
         # Hard error: log for investigation!
+        time = str(datetime.now())
         if "Host is down" in e.__doc__:
             print("[-] Crash Found - Host is down")
             print("Crash Packet :", pkt)
-            time = str(datetime.now())
             crash_cnt += 1
             pkt_info = {}
             pkt_info["no"] = pkt_cnt
             pkt_info["protocol"] = "L2CAP"
-            pkt_info["sended_time"] = time
+            pkt_info["time"] = time
             pkt_info["cmd"] = L2CAP_CmdDict.get(cmd_code, "reserved for future use")
             pkt_info["payload"] = log_pkt(pkt)
             pkt_info["l2cap_state"] = state
@@ -1071,14 +1071,15 @@ def disconnection_state_fuzzing(bt_addr, sock, state_machine, port, packet_info)
     state_machine.w_disconn_to_closed()
 
 def dump_adb_logs(time, port):
-    # NOTE! Port is added to each failed requests, however it may be misleading for certain request types
+    # NOTE! Port is added to each failed request, however it may be misleading for certain request types
     #        that does not seem to be utilizing a port at all! In which case it includes user target port regardless.
-    filename=f"crash_port{port}_{time}_.adb.log"
+    #        This can certainly be improved.
+    filename=f"crash_port{port}_time{time}.adb.log".replace(" ","_")
     print("[-] Hard crash found, search for timestamp in logs to compare")
     print(f"[-] Time of crash {time}, port {port}")
     print(f"[-] Trying to save ADB logs to {filename}")
 
-    ret = os.system(f"sudo adb logcat -t 1000 > {filename}")
+    ret = os.system(f"sudo adb logcat -t 5000 > '{filename}'")
     if ret != 0:
         print(f"ADB logcat may have failed, got exit code {exit_code}")
     return
