@@ -2,6 +2,27 @@
 
 A stateful fuzzer to detect vulnerabilities in Bluetooth BR/EDR Logical Link Control and Adaptation Protocol (L2CAP) layer.
 
+## Details
+
+The tool fuzzes several different Bluetooth states. For some states it uses the user supplied psm (port), for others
+it uses a randomized psm (!), finally some states/requests may not use a psm at all.
+
+Each request is saved to log in the working directory (only after the test completes), in a shared file for each run.
+This is done once per run/target, either when the run is finished (e.g. after a certain number of requests) or upon CTRL+C by user.
+When a random psm is used, the psm is printed in the package log. Otherwise, assume it is the psm given by user.
+
+The fuzzer tries to identify a crash, depending on the host response or lack thereof.
+Some transient errors, were certain connection types fails but the host is still up afterwards (ping test), are not marked as a crash in the log as they are likely false positives.
+On the other hand, "hard crashes" can be found in logs by greping for crash\_info.
+
+On each hard crash, the tool tries to run `sudo adb logcat -t <nr-of-entries-to-print>` to dump the last Android system logs to disk.
+To correlate packets in logs with ADB logs, grep for the timestamp, as these are unique per packet.
+Thereby, if a crash is detected in ADB logcat the offending packet can be found in the fuzzer logs, and possibly replayed (TODO: how?) or further investigated.
+
+The script `fuzz_all_ports.sh` may be used to fuzz all detected ports on target.
+It uses both SDP and manual scanning to identify all ports on target, and runs the fuzzer for each.
+A separate log file is created for each port.
+
 
 ## Prerequisites
 
@@ -17,31 +38,33 @@ pip install -r requirements.txt
 
 L2Fuzz original repo used python3.6.9 and scapy 2.4.4 (if something breaks rollback to these versions?).
 
-## Running the tests: command line
+## Running the fuzzer
 ```
 sudo su
 source venv/bin/activate
 
-# Interactive mode
+# Interactive mode (to fuzz a specific port)
 python3 l2fuzz.py
 
-# Target specific port
+# Fuzz a specific port
 # arg 1: target mac
-# arg 2: numeric index of profile starting at 0
+# arg 2: target port
 python3 l2fuzz.py AA:BB:CC:DD:EE:FF 0
 
-# Scan ONLY services
+# Scan ONLY for available services
+# arg 1: target mac
 # arg 2: "scan-only"
 python3 l2fuzz.py AA:BB:CC:DD:EE:FF scan-only
 
-# Scan all services on ports that seem open
+# Scan and fuzz all ports that seem open
+# arg 1: target mac
 ./fuzz_all_ports.sh AA:BB:CC:DD:EE:FF
 ```
 
-## Running the tests: interactive mode
+## Running the fuzzer: interactive mode
 
-1. move to L2Fuzz folder.
-2. run l2fuzz.py .
+1. Go to L2Fuzz folder.
+2. Run l2fuzz.py:
 ```
 sudo su
 source venv/bin/activate
@@ -75,7 +98,7 @@ Start scanning services...
 
 Select a profile to fuzz : 4
 ```
-5. Fuzz testing start.
+5. [Fuzz testing started]
 
 ### End test
 
@@ -94,7 +117,7 @@ Otherwise, the crash is not marked as such, likely since single failures could b
 
 ## Paper
 
-L2Fuzz paper is published in Jun 27, 2022 through "The 52nd Annual IEEE/IFIP International Conference on Dependable Systems and Networks".
+L2Fuzz paper was published in Jun 27, 2022 through "The 52nd Annual IEEE/IFIP International Conference on Dependable Systems and Networks".
 
 Title : L2Fuzz: Discovering Bluetooth L2CAP Vulnerabilities Using Stateful Fuzz Testing
 
