@@ -2,23 +2,26 @@
 
 A stateful fuzzer to detect vulnerabilities in Bluetooth BR/EDR Logical Link Control and Adaptation Protocol (L2CAP) layer.
 
+## Recommendations
+
+There are many seemingly false positives with the tool and it may be misleading in that it thinks it communicates with a port/service that is in fact closed.
+It is therefore **strongly recommended to get access to system logs** (an example is included with adb logcat).
+Optionally, **ensure traffic is sent as intended** with Wireshark or, even better, with a method that can inspect the actual traffic sent over the air (e.g. Ubertooth).
+To ensure issues are not with the local bluetooth adapter and that the target responds as intended.
+
 ## Details
 
-NOTE: there are many seemingly false positives with the tool and it may be misleading in that it thinks it communicates with a port/service that is in fact closed.
-It is therefore strongly recommended to get access to system logs (an example is included with adb logcat).
-Optionally, ensure traffic is sent as intended with Wireshark or, even better, with a method that can inspect the actual traffic sent over the air (e.g. Ubertooth).
-To ensure issues are not with the local bluetooth adapter and that the target responds as intended.
 
 
 The tool fuzzes several different Bluetooth states. For some states it uses the user supplied psm (port), for others
 it uses a randomized psm (!), finally some states/requests may not use a psm at all.
 
-Each request is saved to log in the working directory (only after the test completes), in a shared file for each run.
+Each request is saved to log in the working directory (_only after the test completes_), in a single file for each run.
 This is done once per run/target, either when the run is finished (e.g. after a certain number of requests) or upon CTRL+C by user.
 When a random psm is used, the psm is printed in the package log. Otherwise, assume it is the psm given by user.
 
-The fuzzer tries to identify a crash, depending on the host response or lack thereof.
-Some transient errors, were certain connection types fails but the host is still up afterwards (ping test), are not marked as a crash in the log as they are likely false positives.
+The fuzzer tries to identify a crash, depending on the target's response or lack thereof.
+Some transient errors, where certain connection types fails but the host is still up afterwards (ping test), are NOT marked as a crash in the log as they are likely false positives.
 On the other hand, "hard crashes" can be found in logs by greping for crash\_info.
 
 On each hard crash, the tool tries to run `sudo adb logcat -t <nr-of-entries-to-print>` to dump the last Android system logs to disk.
@@ -28,14 +31,14 @@ Thereby, if you're able to confirm a system crash in a specific ADB logcat file,
 
 The script `fuzz_all_ports.sh` may be used to fuzz all detected ports on target.
 It uses both SDP and manual scanning to identify all ports on target, and runs the fuzzer for each.
-A separate log file is created for each port.
+Thereby, a separate log file is created for each port.
 Note that, since many requests sent by the fuzzer do not utilize the user-supplied port (rather a random psm, or when applicable, none),
 this is not an efficient way to fuzz only a specific port.
 Regardless, this spent work still provides some value in that it keeps fuzzing random ports / other states, and besides,
 it's fast; where it should be able to fuzz hundreds of millions of requests while you're away sleeping.
 
 
-[1] - NOTE/TODO: the timestamp is set after the bluetooth connection fails, and not at time of sending the packet itself.
+[1] - NOTE (TODO?): the timestamp is set after the bluetooth connection fails, and not at time of sending the packet itself.
 In other words, a system crash/issue - if present - must have happened before this time.
 
 
