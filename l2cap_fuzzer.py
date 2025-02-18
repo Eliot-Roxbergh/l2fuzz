@@ -394,6 +394,7 @@ def send_pkt(bt_addr, sock, pkt, cmd_code, state):
 
     except ConnectionResetError:
         print("[-] Crash Found - ConnectionResetError detected")
+        # Hard error: log for investigation!
         if l2ping(bt_addr) == False:
             print("Crash Packet :", pkt)
             crash_cnt += 1
@@ -407,11 +408,13 @@ def send_pkt(bt_addr, sock, pkt, cmd_code, state):
             pkt_info["sended?"] = "n"
             pkt_info["crash"] = "y"
             pkt_info["crash_info"] = "ConnectionResetError"
+        # Transient error: likely uninteresting, don't log
         else:
             print("[-] The connection failed but it went up quickly again, this was not a hard crash (will not be marked as 'crash' in log).")
 
     except ConnectionRefusedError:
         print("[-] Crash Found - ConnectionRefusedError detected")
+        # Hard error: log for investigation!
         if l2ping(bt_addr) == False:
             print("Crash Packet :", pkt)
             crash_cnt += 1
@@ -425,11 +428,13 @@ def send_pkt(bt_addr, sock, pkt, cmd_code, state):
             pkt_info["sended?"] = "n"
             pkt_info["crash"] = "y"
             pkt_info["crash_info"] = "ConnectionRefusedError"
+        # Transient error: likely uninteresting, don't log
         else:
             print("[-] The connection failed but it went up quickly again, this was not a hard crash (will not be marked as 'crash' in log).")
 
     except ConnectionAbortedError:
         print("[-] Crash Found - ConnectionAbortedError detected")
+        # Hard error: log for investigation!
         if l2ping(bt_addr) == False:
             print("Crash Packet :", pkt)
             crash_cnt += 1
@@ -443,9 +448,11 @@ def send_pkt(bt_addr, sock, pkt, cmd_code, state):
             pkt_info["sended?"] = "n"
             pkt_info["crash"] = "y"
             pkt_info["crash_info"] = "ConnectionAbortedError"
+        # Transient error: likely uninteresting, don't log
         else:
             print("[-] The connection failed but it went up quickly again, this was not a hard crash (will not be marked as 'crash' in log).")
 
+    # Hard error: log for investigation!
     except TimeoutError:
         # State Timeout
         print("[-] Crash Found - TimeoutError detected")
@@ -467,6 +474,7 @@ def send_pkt(bt_addr, sock, pkt, cmd_code, state):
         OSError: [Errno 107] Transport endpoint is not connected
         OSError: [Errno 112] Host is down
         """
+        # Hard error: log for investigation!
         if "Host is down" in e.__doc__:
             print("[-] Crash Found - Host is down")
             print("Crash Packet :", pkt)
@@ -483,6 +491,8 @@ def send_pkt(bt_addr, sock, pkt, cmd_code, state):
             pkt_info["DoS"] = "y"
             pkt_info["crash_info"] = "OSError - Host is down"
             print("[-] Crash packet causes HOST DOWN. Test finished.")
+            #TODO exit program here if host is in fact down ?
+        # OS Error: likely a local issue. TODO could this be interesting? If so which other types of errors?
         else:
             print(f"[!] Unknown issue, got OS error when sending packet: {e}")
             time.sleep(3)
@@ -1039,7 +1049,6 @@ def disconnection_state_fuzzing(bt_addr, sock, state_machine, port, packet_info)
     # state transition
     state_machine.w_disconn_to_closed()
 
-
 def l2cap_fuzzing(bt_addr, profile, port, test_info):
     """
     Fuzzing in specific state = Sending packet from that state.
@@ -1089,29 +1098,30 @@ def l2cap_fuzzing(bt_addr, profile, port, test_info):
                     disconnection_state_fuzzing(bt_addr, sock, state_machine, port, logger)
 
                 except KeyError as exception:
-                    print(f"[-] Got exception KeyError: {exception}.")
-                    print(f"[-] Catch programmer errors, this should never happen.")
+                    print(f"[!] Got exception KeyError: {exception}.")
+                    print(f"[!] Catch programmer errors, this should never happen.")
                     exit(1)
 
                 # In case an unexpected error, reset BT socket/state and continue testing (a bit ugly)
+                # NOTE: you may want to log this? However seems like a lot of false positives
                 except Exception as exception:
                     print(f"[!] Unexpected exception: {exception}. Reopening bluetooth socket and continuing...")
-                    print(f"[-] Warning! This was not expected. Resetting socket/state machine may create issues.\n")
+                    print(f"[!] Warning! This was not expected. Resetting socket/state machine may create issues (?).\n")
 
-                    # arbitrary wait
+                    # arbitrary wait can remove
                     time.sleep(2)
 
                     # Reset Socket and State. TODO: what effect does this have on running test?
                     sock = BluetoothL2CAPSocket(bt_addr)
                     state_machine = l2cap_state_machine()
 
-                    # arbitrary wait
+                    # arbitrary wait can remove
                     time.sleep(2)
                     #print(f"[!] restarted bluetooth socket")
 
-        # (This should not be possible any longer due to above except)
-        except Exception as exception:
-            print(f"[!] Error Message : {exception}")
+
+        except KeyboardInterrupt as k:
+            print("[!] Fuzzing Stopped :", k)
             print("[+] Save logfile")
             logger["end_time"] = str(datetime.now())
             logger["count"] = {
@@ -1121,8 +1131,9 @@ def l2cap_fuzzing(bt_addr, profile, port, test_info):
             }
             json.dump(logger, f, indent="\t")
 
-        except KeyboardInterrupt as k:
-            print("[!] Fuzzing Stopped :", k)
+        # (This should not be possible any longer due to above except)
+        except Exception as exception:
+            print(f"[!] Error Message : {exception}")
             print("[+] Save logfile")
             logger["end_time"] = str(datetime.now())
             logger["count"] = {

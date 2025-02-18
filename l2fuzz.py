@@ -512,7 +512,7 @@ if __name__ == "__main__":
         print("Fuzzing target: ", target_addr, target_protocol, target_profile, target_profile_port)
         print("\n\n")
 
-    # Retry fuzzing a few times on common errors
+    # Start fuzzing (retry a few times on common errors)
     # TODO: note I'm not sure what effect running the fuzzer multiple times has, as it seems to preserve some kind of state (?)
     for i in range(0,5):
         try:
