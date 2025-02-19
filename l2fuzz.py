@@ -323,20 +323,23 @@ def bluetooth_classic_scan():
     return addr_chosen
 
 
-# Manually try all possible CIDs, as SDP may not show all available services
+# Manually try all possible PSMs ("ports"), as SDP may not show all available services
 def find_service(bt_addr):
     open_channels = []
 
-    # Note that, as I remember, 0 is reserved and never work
-    start_cid = 0
-    end_cid = 65535 #max 65535
-
-    # TODO: should we ignore even numbers if they are always supposedly invalid?
+    # Valid range are odd (!) numbers between 1 and 32765 (according to https://people.csail.mit.edu/albert/bluez-intro/x148.html)
+    # Thus, I assure it's useless to test even numbers, so these are skipped below (including 0 which is reserved and should never work)
+    start_psm = 1 #min 1 
+    end_psm = 32765 #max 32765
 
     print("\nTODO: I had issue that scanning took a long time, as each open port created a pairing prompt that needed to timeout or be closed manually. Why?\nIf so, you may want to limit searches, or disabled this feature.")
+    print("This might take a while, scanning start.")
 
-    print(f"Trying to connect to {bt_addr} on PSM ports {start_cid} to {end_cid}:\nWorking..")
-    for port in range(start_cid, end_cid):
+    print(f"Trying to connect to {bt_addr} on PSM ports {start_psm} to {end_psm}:\nWorking..")
+    for port in range(start_psm, end_psm):
+        if num % 2 == 0:
+            pass # ignore even 
+
         sock = bluetooth.BluetoothSocket(bluetooth.L2CAP)
 
         try:
