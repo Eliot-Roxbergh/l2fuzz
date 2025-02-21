@@ -2,7 +2,7 @@
 
 A stateful fuzzer to detect vulnerabilities in Bluetooth BR/EDR Logical Link Control and Adaptation Protocol (L2CAP) layer.
 
-## Changelog from original repo
+## Changelog as compared to original repo
 
 ### Merge pull requests
 - Add proposed fixes <https://github.com/haramel/l2fuzz/pull/2>: "Don't show non-L2CAP profiles", add commandline mode, and minor fixes
@@ -39,12 +39,21 @@ A stateful fuzzer to detect vulnerabilities in Bluetooth BR/EDR Logical Link Con
 
 There are many seemingly false positives with the tool and it may be misleading in that it thinks it communicates with a port/service that is in fact closed.
 It is therefore **strongly recommended to get access to system logs** (an example is included with adb logcat).
-Optionally, **ensure traffic is sent as intended** with Wireshark or, even better, with a method that can inspect the actual traffic sent over the air (this seemed difficult as Ubertooth failed to properly log all packets and show their contents - moreover, common SDR software for BladeRF seemed to have very poor support for Bluetooth Classic).
+Optionally, **ensure traffic is sent as intended** with Wireshark (see section below) or with a method that can inspect the actual traffic sent over the air (this seemed difficult as Ubertooth failed to properly log all packets and show their contents - moreover, common SDR software for BladeRF seemed to have very poor support for Bluetooth Classic).
 To ensure issues are not with the local bluetooth adapter and that the target responds as intended.
 
+### Wireshark
+Start Wireshark in the background while capturing, listen to interface bluetooth-monitor to avoid error when BT adapter is reset.
+Afterwards, use filtering to ignore local packets to/from controller, with `bluetooth.addr == <TARGET_ADDR>` or for source only `bluetooth.src == <TARGET_ADDR>`.
+
+One interesting thing to look for might be successful connections (to ports other than SDP 0x01, and when unpaired), to do this you may do the following. \
+Look at Disconnection Requests to see which ports (PSMs) seemed to succeed: `bluetooth.src == <TARGET_ADDR> and btl2cap.cmd_code == 0x06`. \
+Finally, if any ports succeeded in an unpaired state this could be of note, inspect the whole connection with a less restrictive filter (this ignores some error packets): `bluetooth.src == <TARGET_ADDR> and !(btl2cap.cmd_code == 0x07) and !(btl2cap.result == 0x0002) and !(_ws.col.info == "Rcvd Command Reject")`. \
+Open ports could then be further targeted with some other tools, or further investigated (note: PSM is in hex format). \
+In our example, we detected that some of the reported ports by SDP seemed to accept requests even when unpaired, ignoring SDP (0x01) itself, this was unexpected.
+
+
 ## Details
-
-
 
 The tool fuzzes several different Bluetooth states. For some states it uses the user supplied psm (port), for others
 it uses a randomized psm (!), finally some states/requests may not use a psm at all.
