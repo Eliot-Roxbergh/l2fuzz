@@ -2,11 +2,44 @@
 
 A stateful fuzzer to detect vulnerabilities in Bluetooth BR/EDR Logical Link Control and Adaptation Protocol (L2CAP) layer.
 
+## Changelog from original repo
+
+### Merge pull requests
+- Add proposed fixes <https://github.com/haramel/l2fuzz/pull/2>: "Don't show non-L2CAP profiles", add commandline mode, and minor fixes
+- Add proposed fixes <https://github.com/haramel/l2fuzz/pull/6>: minor bug fix, add gitignore, add requirements.txt
+
+### Build
+- Remove .python-version to avoid forcing old Python
+- Use latest dependencies in requirements.txt, and add related fixes to ensure it builds on Ubuntu 24.04.
+
+### New features
+- Use also manual connection scan (in addition to the SDP scan) when looking for services in commandline mode.
+- Add function ensure_bluetooth_up that restarts bluetooth until an adapter is found, as reset_bluetooth may not always bring the adapter back up.
+- Automatically run adb logcat on each hard crash, if possible, and save the last 5000 entries to .log file on disk. \
+  This results in the original (.wrt) logfile per target port, as well as a new (.adb.log) file with the logcat dump for each hard crash. \
+  To determine which run (.wrt file) resulted in a specific hard crash (.adb.log), grep for the timestamp in the filename to find the correspoding entry in the .wrt log for the run.
+- Add command "scan-only" to only list all discovered services in commandline mode, without fuzzing.
+- Add Bash script to automatically fuzz all ports that were discovered as open on target. \
+  This was done in a Bash script to avoid using state from earlier fuzzing rounds as it otherwise would be run in the same single Python process.
+
+### Exceptions and failure behavior
+- Ignore several exceptions and try to continue anyway (add time.sleep, and restart bluetooth adapter or reset socket/state machine when necessary), to avoid fuzzing failing early. For some major unexpected exception the fuzzer will be retried up to five times (arbitrary number), until it gives up.
+- Instead of defaulting to PSM/port 1 on connection error, continue using the requested port, to avoid confusion. Note that you may want to troubleshoot this error still.
+
+### Logging
+- Instead of log truncation which deletes a lot of the logs, simple log everything but limit each run to 50 million packets (!) (as this limits the file to about 1-2GB).
+- Clarify print outs and comments regarding which crashes are "soft" and can be ignored, or "hard" which are the ones written to log.
+- Update log filename to contain the port that user requested (note: as normally, the program still scans other ports as well, which are still saved to this file, these packets are differentiated by the psm field that holds the port used for that specific packet)
+- Save timestamp earlier after a crash to get slightly better precision.
+
+### Other
+- Update README to use venv, and add Details and Recommendations
+
 ## Recommendations
 
 There are many seemingly false positives with the tool and it may be misleading in that it thinks it communicates with a port/service that is in fact closed.
 It is therefore **strongly recommended to get access to system logs** (an example is included with adb logcat).
-Optionally, **ensure traffic is sent as intended** with Wireshark or, even better, with a method that can inspect the actual traffic sent over the air (e.g. Ubertooth).
+Optionally, **ensure traffic is sent as intended** with Wireshark or, even better, with a method that can inspect the actual traffic sent over the air (this seemed difficult as Ubertooth failed to properly log all packets and show their contents - moreover, common SDR software for BladeRF seemed to have very poor support for Bluetooth Classic).
 To ensure issues are not with the local bluetooth adapter and that the target responds as intended.
 
 ## Details
