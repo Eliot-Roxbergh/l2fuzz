@@ -606,7 +606,7 @@ def connection_state_fuzzing(bt_addr, sock, state_machine, packet_info):
             )
             / garbage_value(garbage=randrange(0x0000, 0x10000))
         )
-        # I assume that the ConnResp uses same PSM (port) as used above in ConnReq?
+        # Port is included for logging purposes only: I assume that the ConnResp uses same PSM (port) as used above in ConnReq?
         sock, pkt_info = send_pkt(
             bt_addr, sock, pkt, cmd_code, state_machine.current_state.name, random_port
         )
@@ -650,7 +650,7 @@ def creation_state_fuzzing(bt_addr, sock, state_machine, packet_info):
             / garbage_value(garbage=randrange(0x0000, 0x10000))
         )
 
-        # I assume that the ConnResp uses same PSM (port) as used above in ConnReq?
+        # Port is included for logging purposes only: I assume that the ConnResp uses same PSM (port) as used above in ConnReq?
         sock, pkt_info = send_pkt(
             bt_addr, sock, pkt, cmd_code, state_machine.current_state.name, random_port
         )
@@ -696,21 +696,31 @@ def configuration_state_fuzzing(
             conn_rsp_flag = 1
             # Can't connect to selected PSM.
             #
-            # TODO this worked terribly in the test setup: each port fails with this error for some reason, including port 1.
-            #       Description of code: it only runs this if-statement once, defaults to port 1 on failure, and then moves on.
-            #       Result: This seems quite useless as nothing says that port 1 would succeed,
-            #                   moreover, it's misleading to test another port than given by user.
-            #       Correct me if I'm wrong.
+            # As l2fuzz is supposed to be used with an unpaired port,
+            # TODO I get this error on any port, regardless if it requires pairing or not, or whether if I'm paired or not!
+            #       It could be that SDP is not a connection oriented protocol and should fail this request? (in which case add logic for this)
+            #        And furthermore that the other ports in my testing - even if they seem to work when fuzzing -
+            #        does similarily fail?
+            #       As indicated by the error message below, the recommended port to fuzz is SDP (port 1).
+            #        If a port other than 1 is used, it is normal behavior that you need to pair in order to access and fuzz those ports.
+            #
+            # Reasoning for removal of port 1 fallback:
+            #   As SDP should always work unpaired, the simplest solution is to fuzz this port only.
+            #   However, it seemed confusing to the user that the program overrides their chosen port, so I removed the fallback to port 1,
+            #     and instead continuing the test anyway.
+            #   Note that it is likely that the fuzz test doesn't do much if the port requires pairing, in which case
+            #     you should only see each packet being rejected. Still, the user may want to try this anyway to verify that's the case.
+            #
             if result_value != 0:
                 print(
-                    "[!] Device is not paired with host('{}'). \n[!] Can't (?) test service port that you've selected (try port 1 instead?).".format(
+                    "[!] Device is not paired with host('{}'). \n[!] l2fuzz may not be able to test the service port that you've selected. (try port 1 instead as SDP should not require pairing).".format(
                         L2CAP_Connect_Result.get(
                             result_value, "reserved for future use"
                         )
                     )
                 )
-                print(f"[-] Warning you may want to test another port or verify test is actually working for {port=}.")
-                print("[-] Ignoring this error and trying again, beware.")
+                print(f"[!] Verify that {port=} does allow for unpaired connections, alternatively ensure that you are paired.")
+                print("[!] Ignoring this error and trying again, beware.")
                 #port = 1
                 continue
         break
